@@ -98,16 +98,6 @@ jobs:
             SYSTEM_STATS_TAG=${{ steps.versions.outputs.system_stats }}
             POSTGRESML_TAG=${{ steps.versions.outputs.postgresml }}
 
-      - name: Make the GHCR package public
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          gh api --method PUT "/user/packages/container/pgvectorscaledb/visibility" \
-            -f visibility=public \
-            || gh api --method PUT "/users/${owner}/packages/container/pgvectorscaledb/visibility" \
-              -f visibility=public
-
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_TOKEN != '' && env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v4.6.0
