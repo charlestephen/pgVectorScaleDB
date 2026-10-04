@@ -40,6 +40,9 @@ fi
 # shellcheck disable=SC1091
 . "${CARGO_HOME:-$HOME/.cargo}/env"
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:${PATH}"
+# Alpine's Rust musl target links statically and then cannot find libssl.a.
+# The TimescaleDB image provides shared libraries, which a Postgres extension needs.
+export RUSTFLAGS="${RUSTFLAGS:-} -C target-feature=-crt-static"
 
 jobs="$(getconf _NPROCESSORS_ONLN)"
 mkdir -p /src
