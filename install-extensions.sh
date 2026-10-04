@@ -13,7 +13,7 @@ echo "Building against $(pg_config --version) from ${TIMESCALE_TAG:-the base ima
 test "$(pg_config --pkglibdir)" = /usr/local/lib/postgresql
 test "$(pg_config --sharedir)" = /usr/local/share/postgresql
 
-apk add --no-cache \
+apk add --no-cache --virtual .build-deps \
   bash \
   build-base \
   ca-certificates \
@@ -33,19 +33,29 @@ echo "libclang=${libclang:-missing}"
 test -n "$libclang"
 export LIBCLANG_PATH="$(dirname "$libclang")"
 
+export CARGO_HOME=/root/.cargo
+export RUSTUP_HOME=/root/.rustup
+export PATH="${CARGO_HOME}/bin:${PATH}"
 if ! command -v rustc >/dev/null 2>&1; then
   curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
     | sh -s -- -y --profile minimal --default-toolchain stable
 fi
-# shellcheck disable=SC1091
-. "${CARGO_HOME:-$HOME/.cargo}/env"
-export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:${PATH}"
-# Alpine's Rust musl target links statically and then cannot find libssl.a.
-# The TimescaleDB image provides shared libraries, which a Postgres extension needs.
-export RUSTFLAGS="${RUSTFLAGS:-} -C target-feature=-crt-static"
+# Alpine's musl Rust target links statically unless crt-static is disabled.
+# pgvectorscale requires AVX2 and FMA on x86_64. Those features do not exist on arm64.
+case "${TARGETARCH:-$(uname -m)}" in
+  amd64|x86_64)
+    export RUSTFLAGS="-C target-feature=-crt-static,+avx2,+fma"
+    ;;
+  *)
+    export RUSTFLAGS="-C target-feature=-crt-static"
+    ;;
+esac
 
 jobs="$(getconf _NPROCESSORS_ONLN)"
-mkdir -p /src
+pkg="$(pg_config --pkglibdir)"
+share="$(pg_config --sharedir)/extension"
+mkdir -p /src /tmp/manifest
+find "$pkg" "$share" -type f | sort > /tmp/manifest/before
 
 echo "pgvector ${PGVECTOR_TAG}"
 git clone --depth 1 --branch "$PGVECTOR_TAG" https://github.com/pgvector/pgvector.git /src/pgvector
@@ -86,4 +96,15 @@ done
 if [ -f "${sharedir}/pgml.control" ]; then
   echo "installed pgml"
 fi
+
+find "$pkg" "$share" -type f | sort > /tmp/manifest/after
+mkdir -p /out
+while IFS= read -r file; do
+  [ -n "$file" ] || continue
+  mkdir -p "/out/$(dirname "$file")"
+  cp -a "$file" "/out$file"
+done < <(comm -13 /tmp/manifest/before /tmp/manifest/after)
+
+rm -rf /src /tmp/manifest /tmp/install-extensions.sh
+apk del .build-deps
 echo "extension build finished"
