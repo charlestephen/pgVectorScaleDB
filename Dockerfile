@@ -12,8 +12,8 @@ ARG SYSTEM_STATS_TAG=v4.1
 ARG POSTGRESML_TAG=skip
 
 COPY install-extensions.sh /tmp/install-extensions.sh
-RUN --mount=type=cache,target=/root/.cargo,sharing=locked \
-    --mount=type=cache,target=/root/.rustup,sharing=locked \
+RUN --mount=type=cache,id=cargo-${TARGETARCH},target=/root/.cargo,sharing=locked \
+    --mount=type=cache,id=rustup-${TARGETARCH},target=/root/.rustup,sharing=locked \
     chmod 755 /tmp/install-extensions.sh \
   && TIMESCALE_TAG="$TIMESCALE_TAG" \
      TARGETARCH="$TARGETARCH" \
