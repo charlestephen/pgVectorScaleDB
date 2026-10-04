@@ -18,6 +18,7 @@ apk add --no-cache \
   build-base \
   ca-certificates \
   clang \
+  clang-dev \
   curl \
   git \
   jq \
@@ -27,7 +28,8 @@ apk add --no-cache \
   openssl-dev \
   pkgconf
 
-libclang="$(find /usr/lib -name 'libclang.so*' -print -quit)"
+libclang="$(find /usr/lib \( -name 'libclang.so' -o -name 'libclang.so.*' \) -print -quit)"
+echo "libclang=${libclang:-missing}"
 test -n "$libclang"
 export LIBCLANG_PATH="$(dirname "$libclang")"
 
