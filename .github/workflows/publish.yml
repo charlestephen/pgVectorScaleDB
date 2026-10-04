@@ -1,0 +1,135 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve latest upstream releases
+        id: versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./resolve-versions.sh versions.env
+          set -a
+          # shellcheck disable=SC1091
+          . ./versions.env
+          set +a
+          {
+            echo "timescale=${TIMESCALE_TAG}"
+            echo "pgvector=${PGVECTOR_TAG}"
+            echo "pgvectorscale=${PGVECTORSCALE_TAG}"
+            echo "system_stats=${SYSTEM_STATS_TAG}"
+            echo "postgresml=${POSTGRESML_TAG}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bumps
+        run: |
+          git add versions.env
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "Track latest extension releases"
+          git push
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build amd64 image for tests
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          platforms: linux/amd64
+          tags: pgvectorscaledb:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            TIMESCALE_TAG=${{ steps.versions.outputs.timescale }}
+            PGVECTOR_TAG=${{ steps.versions.outputs.pgvector }}
+            PGVECTORSCALE_TAG=${{ steps.versions.outputs.pgvectorscale }}
+            SYSTEM_STATS_TAG=${{ steps.versions.outputs.system_stats }}
+            POSTGRESML_TAG=${{ steps.versions.outputs.postgresml }}
+
+      - name: Test extensions
+        run: ./test/check-extensions.sh pgvectorscaledb:test
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/pgvectorscaledb:pg18
+            ghcr.io/${{ github.repository_owner }}/pgvectorscaledb:latest
+          build-args: |
+            TIMESCALE_TAG=${{ steps.versions.outputs.timescale }}
+            PGVECTOR_TAG=${{ steps.versions.outputs.pgvector }}
+            PGVECTORSCALE_TAG=${{ steps.versions.outputs.pgvectorscale }}
+            SYSTEM_STATS_TAG=${{ steps.versions.outputs.system_stats }}
+            POSTGRESML_TAG=${{ steps.versions.outputs.postgresml }}
+
+      - name: Make the GHCR package public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          gh api --method PUT "/user/packages/container/pgvectorscaledb/visibility" \
+            -f visibility=public \
+            || gh api --method PUT "/users/${owner}/packages/container/pgvectorscaledb/visibility" \
+              -f visibility=public
+
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_TOKEN != '' && env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push to Docker Hub
+        if: env.DOCKERHUB_TOKEN != '' && env.DOCKERHUB_USERNAME != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/pgvectorscaledb:pg18
+            ${{ secrets.DOCKERHUB_USERNAME }}/pgvectorscaledb:latest
+          build-args: |
+            TIMESCALE_TAG=${{ steps.versions.outputs.timescale }}
+            PGVECTOR_TAG=${{ steps.versions.outputs.pgvector }}
+            PGVECTORSCALE_TAG=${{ steps.versions.outputs.pgvectorscale }}
+            SYSTEM_STATS_TAG=${{ steps.versions.outputs.system_stats }}
+            POSTGRESML_TAG=${{ steps.versions.outputs.postgresml }}
