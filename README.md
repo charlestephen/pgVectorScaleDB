@@ -14,12 +14,3 @@ docker run --rm -e POSTGRES_PASSWORD=secret -p 5432:5432 ghcr.io/charlestephen/p
 ```
 
 The first start creates `timescaledb`, `vector`, `vectorscale`, and `system_stats` in `POSTGRES_DB`.
-
-Docker Hub publishes only after these repository secrets exist:
-
-```bash
-gh secret set DOCKERHUB_USERNAME --repo charlestephen/pgVectorScaleDB
-gh secret set DOCKERHUB_TOKEN --repo charlestephen/pgVectorScaleDB
-```
-
-`DOCKERHUB_TOKEN` is a Docker Hub access token with write access. The Docker Hub account is `charlestephen`.
