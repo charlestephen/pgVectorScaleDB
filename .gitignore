@@ -1,1 +1,6 @@
 *.log
+
+# Local tooling and OS files
+.DS_Store
+.gitignore
+.gitguardian*
