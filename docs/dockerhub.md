@@ -121,4 +121,4 @@ A PostgreSQL major version change needs a dump and restore or `pg_upgrade`. Upda
 
 ## License
 
-See https://github.com/charlestephen/pgVectorScaleDB for the licenses of the bundled projects.
+The build files and scripts are licensed under the GNU General Public License v3.0 (https://github.com/charlestephen/pgVectorScaleDB/blob/main/LICENSE). The software included in the image is distributed under its own licenses.

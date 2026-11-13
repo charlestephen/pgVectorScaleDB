@@ -14,3 +14,7 @@ docker run --rm -e POSTGRES_PASSWORD=secret -p 5432:5432 ghcr.io/charlestephen/p
 ```
 
 The first start creates `timescaledb`, `vector`, `vectorscale`, and `system_stats` in `POSTGRES_DB`.
+
+## License
+
+The build files and scripts in this repository are licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE). The software included in the image (PostgreSQL, TimescaleDB, pgvector, pgvectorscale, system_stats) is distributed under its own licenses.
