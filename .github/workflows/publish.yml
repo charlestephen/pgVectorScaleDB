@@ -123,3 +123,14 @@ jobs:
             PGVECTORSCALE_TAG=${{ steps.versions.outputs.pgvectorscale }}
             SYSTEM_STATS_TAG=${{ steps.versions.outputs.system_stats }}
             POSTGRESML_TAG=${{ steps.versions.outputs.postgresml }}
+
+      - name: Update Docker Hub overview
+        continue-on-error: true
+        if: env.DOCKERHUB_TOKEN != '' && env.DOCKERHUB_USERNAME != ''
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/pgvectorscaledb
+          short-description: PostgreSQL 18 with TimescaleDB, pgvector, pgvectorscale and system_stats.
+          readme-filepath: docs/dockerhub.md
