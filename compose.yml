@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: ghcr.io/charlestephen/pgvectorscaledb:pg18
+    image: ghcr.io/charlestephen/pgvectorscaledb:pg18@sha256:07ddc2e6072b69abf039e1eca0b8aeaa3ff3214e17b042783ec0418b5c119276
     # To build from source instead, uncomment:
     # build:
     #   context: .
