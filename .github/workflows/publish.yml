@@ -58,6 +58,7 @@ jobs:
         uses: docker/build-push-action@v7.4.0
         with:
           context: .
+          file: Containerfile
           load: true
           platforms: linux/amd64
           tags: pgvectorscaledb:test
@@ -84,6 +85,7 @@ jobs:
         uses: docker/build-push-action@v7.4.0
         with:
           context: .
+          file: Containerfile
           push: true
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
@@ -110,6 +112,7 @@ jobs:
         uses: docker/build-push-action@v7.4.0
         with:
           context: .
+          file: Containerfile
           push: true
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha

@@ -22,6 +22,7 @@ exec "$engine" build \
   --build-arg "PGVECTORSCALE_TAG=${PGVECTORSCALE_TAG}" \
   --build-arg "SYSTEM_STATS_TAG=${SYSTEM_STATS_TAG}" \
   --build-arg "POSTGRESML_TAG=${POSTGRESML_TAG}" \
+  -f Containerfile \
   -t pgvectorscaledb:pg18 \
   "$@" \
   .
